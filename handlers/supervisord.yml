@@ -1,0 +1,12 @@
+# handlers file for supervisord
+- name: restart supervisord
+  become: true
+  service:
+    name: supervisord
+    state: restarted
+
+- name: reload supervisord
+  become: true
+  service:
+    name: supervisord
+    state: reloaded

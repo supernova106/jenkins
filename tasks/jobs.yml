@@ -1,0 +1,20 @@
+---
+- name: Job directories are present
+  file:
+    path: "{{ jenkins_home }}/jobs/{{ item }}"
+    state: directory
+    mode: 0777
+  with_items: "{{ jenkins_jobs }}"
+  when:
+    - len(jenkins_jobs) > 0
+
+- name: Jobs are present
+  copy:
+    src: "{{ jenkins_source_dir_jobs }}/{{ item }}/config.xml"
+    dest: "{{ jenkins_home }}/jobs/{{ item }}/config.xml"
+    mode: 0777
+  with_items: "{{ jenkins_jobs }}"
+  notify:
+    - reload jenkins
+  when:
+    - len(jenkins_jobs) > 0

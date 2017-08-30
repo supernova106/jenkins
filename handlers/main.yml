@@ -1,0 +1,36 @@
+---
+# handlers file for jenkins
+- name: restart jenkins
+  service:
+    name: jenkins
+    state: restarted
+  notify:
+    - Wait for Jenkins to start up
+  tags:
+    - jenkins
+
+- name: reload jenkins
+  become: true
+  command: "/etc/init.d/jenkins force-reload"
+  notify:
+    - Wait for Jenkins to start up
+
+- name: Wait for Jenkins to start up
+  shell: "curl -D - --silent --max-time 5 http://{{ jenkins_hostname }}:{{ jenkins_http_port }}{{ jenkins_url_prefix }}/cli/"
+  register: result
+  until: (result.stdout.find("403 Forbidden") != -1) or (result.stdout.find("200 OK") != -1) and (result.stdout.find("Please wait while") == -1)
+  retries: "{{ jenkins_connection_retries }}"
+  delay: "{{ jenkins_connection_delay }}"
+  changed_when: false
+  check_mode: no
+
+- name: configure default users
+  template:
+    src: jenkins/basic-security.groovy.j2
+    dest: "{{ jenkins_home }}/init.groovy.d/basic-security.groovy"
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_group }}"
+    mode: 0775
+
+- include: supervisord.yml
+- include: traefik.yml

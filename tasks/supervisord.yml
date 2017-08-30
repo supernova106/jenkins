@@ -1,0 +1,93 @@
+---
+- name: ensure customized bin
+  become: true
+  file:
+    path: "{{ customized_bin_dir }}"
+    state: directory
+  tags:
+    - supervisord
+    - jenkins
+
+- name: install supervisord
+  become: true
+  pip:
+    name: supervisor
+    version: "{{ supervisord_version }}"
+  tags:
+    - supervisord
+    - jenkins
+
+- name: setup supervisor service check script
+  become: true
+  template:
+    src: supervisor_service_check.sh.j2
+    dest: "{{ customized_bin_dir }}/supervisor_service_check.sh"
+    mode: 0755
+  tags:
+    - supervisord
+    - jenkins
+
+- name: ensuring required supervisord directories
+  become: true
+  file:
+    path: "{{ supervisord_conf_dir }}"
+    state: directory
+    recurse: yes
+  tags:
+    - supervisord
+    - jenkins
+
+- name: add supervisord config
+  become: true
+  template:
+    src: supervisord.conf.j2
+    dest: /etc/supervisor/supervisord.conf
+  notify:
+    - restart supervisord
+  tags:
+    - supervisord
+    - jenkins
+
+- name: ensuring sysconfig directories
+  become: true
+  file:
+    path: "/etc/sysconfig"
+    state: directory
+    recurse: yes
+  tags:
+    - supervisord
+    - jenkins
+
+- name: setup supervisord sysconfig
+  become: true
+  template:
+    src: sysconfig.supervisord.j2
+    dest: "{{ supervisord_sysconfig }}"
+    mode: 0644
+  notify:
+    - restart supervisord
+  tags:
+    - supervisord
+    - jenkins
+
+- name: setup supervisord systemd service
+  become: true
+  template:
+    src: supervisord.service.j2
+    dest: "/etc/systemd/system/supervisord.service"
+    mode: 0644
+  notify:
+    - restart supervisord
+  tags:
+    - supervisord
+    - jenkins
+
+- name: start supervisord
+  become: true
+  service:
+    name: supervisord
+    state: started
+    enabled: true
+  tags:
+    - supervisord
+    - jenkins

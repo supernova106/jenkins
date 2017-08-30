@@ -1,0 +1,15 @@
+[program:jenkins_slave]
+environment=JENKINS_SLAVE_PASSWORD={{ jenkins_slave_password }}
+command= {{ customized_bin_dir }}/start_jenkins_slave.sh
+autostart=true
+autostart=true
+autorestart=true
+startretries=999
+redirect_stderr=True
+nodaemon = False
+debug = False
+user={{ jenkins_user }}
+stdout_logfile = {{ jenkins_slave_log_dir }}/jenkins_slave.out
+stderr_logfile = {{ jenkins_slave_log_dir }}/jenkins_slave.err
+loglevel = {{ jenkins_slave_log_level }}
+stopasgroup=true

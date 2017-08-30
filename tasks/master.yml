@@ -1,0 +1,98 @@
+- name: add apt key for Jenkins stable repository
+  apt_key:
+    url: "https://pkg.jenkins.io/debian/jenkins.io.key"
+    state: present
+  tags:
+    - jenkins
+
+- name: Install lastest stable Jenkins package
+  become: true
+  apt:
+   name: jenkins
+   state: "{{ jenkins_stable_state }}"
+   update_cache: yes
+   cache_valid_time: 3600
+  when: "jenkins_version is none"
+  tags:
+   - jenkins
+
+- name: Download specific Jenkins version.
+  get_url:
+    url: "{{ jenkins_pkg_url }}/jenkins_{{ jenkins_version }}_all.deb"
+    dest: "/tmp/jenkins_{{ jenkins_version }}_all.deb"
+  when: jenkins_version is defined
+  tags:
+   - jenkins
+
+- name: Check if we downloaded a specific version of Jenkins.
+  stat:
+    path: "/tmp/jenkins_{{ jenkins_version }}_all.deb"
+  register: specific_version
+  when: jenkins_version is defined
+  tags:
+   - jenkins
+
+- name: Install our specific version of Jenkins.
+  apt:
+    deb: "/tmp/jenkins_{{ jenkins_version }}_all.deb"
+    state: installed
+  when: jenkins_version is defined and specific_version.stat.exists
+  notify: configure default users
+  tags:
+   - jenkins
+
+- name: Ensure Jenkins is installed.
+  apt:
+    name: jenkins
+    state: present
+  notify: configure default users
+
+- include: settings.yml
+
+- name: Get the jenkins-cli jarfile from the Jenkins server.
+  get_url:
+    url: "http://{{ jenkins_hostname }}:{{ jenkins_http_port }}{{ jenkins_url_prefix }}/jnlpJars/jenkins-cli.jar"
+    dest: "{{ jenkins_jar_location }}"
+  register: jarfile_get
+  until: "'OK' in jarfile_get.msg or 'file already exists' in jarfile_get.msg"
+  retries: 5
+  delay: 10
+  check_mode: no
+  tags:
+   - jenkins
+
+- name: Remove Jenkins security init scripts after first startup.
+  file:
+    path: "{{ jenkins_home }}/init.groovy.d/basic-security.groovy"
+    state: absent
+  tags:
+   - jenkins
+
+# Update Jenkins and install configured plugins.
+- include: plugins.yml
+- include: jobs.yml
+
+# to configure plugins settings automatically
+- name: Configuration file is up to date (config.xml)
+  template:
+    src: "jenkins/config.xml.j2"
+    dest: "{{ jenkins_home }}/config.xml"
+    mode: 0644
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_group }}"
+  when: jenkins_version != ""
+  notify:
+    - restart jenkins
+  tags:
+    - jenkins
+
+- include: traefik.yml
+  when:
+    - jenkins_install_reverse_proxy
+    - jenkins_reverse_proxy == "traefik"
+
+- name: fetch jenkins master password
+  fetch:
+    src: "{{ jenkins_admin_password_file }}"
+    dest: "/tmp/{{ jenkins_admin_password_file }}"
+    flat: yes

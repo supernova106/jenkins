@@ -1,0 +1,8 @@
+#!/bin/bash
+BIN="/opt/swarm-client.jar"
+
+java  -jar ${BIN} \
+      -executors $(nproc) \
+      -username {{ jenkins_slave_username }} \
+      -passwordEnvVariable JENKINS_SLAVE_PASSWORD \
+      -disableSslVerification

@@ -1,0 +1,33 @@
+---
+- hosts: jenkins_master
+  become: true
+  vars:
+    jenkins_domain: example.com
+    jenkins_plugins:
+      - maven-plugin
+      - javadoc
+      - junit
+      - mailer
+      - token-macro
+      - workflow-aggregator
+      - ldap
+      - blueocean
+      - swarm
+      - active-directory
+      - authentication-tokens
+      - ws-cleanup
+      - discard-old-build
+      - role-strategy
+    jenkins_include_custom_files: true
+    jenkins_custom_files:
+      - org.jenkinsci.main.modules.sshd.SSHD.xml
+  roles:
+    - jenkins
+
+- hosts: jenkins_slave
+  become: true
+  vars:
+    is_slave: true
+    master_url: http://<jenkins_master>.ebates.int:8080
+  roles:
+    - jenkins

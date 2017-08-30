@@ -1,0 +1,99 @@
+---
+# defaults file for jenkins
+# if jenkins_version is not specified, stable version will be installed
+jenkins_version: 2.75
+
+# with stable version, state is present by defaults
+jenkins_stable_state: present
+
+jenkins_connection_delay: 5
+jenkins_connection_retries: 60
+jenkins_http_port: 8080
+
+# The directory on the server where the Jenkins configs will live
+jenkins_install_reverse_proxy: false
+is_vagrant: false
+jenkins_reverse_proxy: "nginx"
+jenkins_home: /var/lib/jenkins
+jenkins_domain: ""
+jenkins_hostname: "{% if is_vagrant %}localhost{% else %}{{ inventory_hostname }}.{{ jenkins_domain }}{% endif %}"
+jenkins_jar_location: /opt/jenkins-cli.jar
+jenkins_url_prefix: ""
+jenkins_url: "{% if jenkins_install_reverse_proxy %}http://{{ jenkins_hostname }}{% else %}http://{{ jenkins_hostname }}:{{ jenkins_http_port }}{% endif %}"
+
+# If you need to override any java options then do that here.
+jenkins_java_options: "-Djenkins.install.runSetupWizard=false"
+
+# The admininstrator email address for the Jenkins server
+jenkins_admin: "admin@example.com"
+
+# The names of the jobs (jenkins_source_dir_jobs/job_name/)
+jenkins_jobs: []
+
+jenkins_plugins:
+  - maven-plugin
+  - javadoc
+  - junit
+  - mailer
+  - token-macro
+  - workflow-aggregator
+  - ldap
+  - blueocean
+  - swarm
+  - active-directory
+  - authentication-tokens
+  - ws-cleanup
+  - discard-old-build
+  - role-strategy
+
+uninstall_jenkins_plugins: []
+
+jenkins_plugins_state: present
+jenkins_plugin_updates_expiration: 86400
+jenkins_plugin_timeout: 300
+
+jenkins_user: jenkins
+jenkins_group: "{{ jenkins_user }}"
+
+# The locations of the configuration files for jenkins: files/jenkins-configs
+jenkins_source_dir_configs: "jenkins-configs"
+jenkins_source_dir_jobs: "{{ jenkins_source_dir_configs }}/jobs"
+
+# Include custom files for jenkins installation
+jenkins_include_custom_files: false
+jenkins_custom_files: {}
+
+# Include secrets directory during installation
+jenkins_include_secrets: false
+jenkins_source_secrets: "{{ jenkins_source_dir_configs }}/secrets/"
+
+jenkins_admin_username: admin
+jenkins_admin_password: admin
+jenkins_admin_password_file: "{{ jenkins_home }}/secrets/initialAdminPassword"
+jenkins_admin_token: ""
+jenkins_admin_token_file: ""
+
+jenkins_init_changes:
+  - option: "JENKINS_ARGS"
+    value: "--prefix={{ jenkins_url_prefix }}"
+  - option: "{{ jenkins_java_options_env_var }}"
+    value: "{{ jenkins_java_options }}"
+
+# slave
+is_slave: false
+jenkins_slave_log_dir: /var/log/jenkins
+jenkins_slave_log_level: "info"
+jenkins_slave_username: admin
+jenkins_slave_password: ""
+jenkins_slave_password_file: "/tmp{{ jenkins_admin_password_file }}"
+java_swarm_client: 3.4
+master_url: "http://qa1-uscjenkinsmaster01.{{ jenkins_domain }}:{{ jenkins_http_port }}"
+supervisord_version: 3.3.2
+
+# reverse proxy (traefik)
+traefik_web_ui_port: 8081
+traefik_version: 1.3.6
+traefik_config_file: /etc/traefik.toml
+traefik_log_level: "INFO"
+traefik_tls_cert_file: ""
+traefik_tls_key_file: ""

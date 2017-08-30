@@ -1,0 +1,46 @@
+---
+# tasks file for jenkins
+- name: Add repository for OpenJDK 8 (Ubuntu 14).
+  apt_repository: repo='ppa:openjdk-r/ppa'
+  when:
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_version == "14.04"
+  tags:
+    - jenkins
+
+- name: install Dependencies
+  become: true
+  apt:
+    name: "{{ item }}"
+    state: latest
+    update_cache: yes
+    cache_valid_time: 3600
+  when:
+    - ansible_distribution == "Ubuntu"
+  with_items:
+  - openjdk-8-jre-headless
+  - openjdk-8-jdk
+  - ca-certificates-java
+  - curl
+  - apt-transport-https
+  - python-pip
+  tags:
+    - jenkins
+
+- name: install AWS CLI
+  become: true
+  pip:
+    name: awscli
+    extra_args: --upgrade
+  tags:
+    - jenkins
+
+- include: master.yml
+  when:
+    - not(is_slave) | bool
+    - ansible_distribution == "Ubuntu"
+
+- include: slave.yml
+  when:
+    - is_slave | bool
+    - ansible_distribution == "Ubuntu"

@@ -1,0 +1,6 @@
+* hard nproc {{ limit_noproc }}
+* soft nproc {{ limit_noproc }}
+* soft nofile {{ limit_nofile }}
+* hard nofile {{ limit_nofile }}
+root soft nofile {{ limit_nofile }}
+root hard nofile {{ limit_nofile }}

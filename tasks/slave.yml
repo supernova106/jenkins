@@ -1,0 +1,105 @@
+- name: copy Jenkins password file
+  copy:
+    src: "{{ jenkins_slave_password_file }}"
+    dest: "/tmp/jenkins_slave_password"
+  when:
+    - jenkins_slave_password_file != ""
+    - jenkins_slave_password == ""
+  tags:
+    - jenkins
+
+- name: Get Jenkins admin password from file.
+  shell: "cat /tmp/jenkins_slave_password"
+  register: jenkinsslavepasswordfile
+  no_log: True
+  when:
+    - jenkins_slave_password_file != ""
+    - jenkins_slave_password == ""
+  tags:
+   - jenkins
+
+- name: Set Jenkins password fact.
+  set_fact:
+    jenkins_slave_password: "{{ jenkinsslavepasswordfile.stdout }}"
+  no_log: True
+  when:
+    - jenkins_slave_password == ""
+    - jenkinsslavepasswordfile.stdout != ""
+  tags:
+   - jenkins
+
+- name: check if jenkins_slave_password is empty
+  fail: msg="Please supply jenkins_slave_password"
+  when:
+    - jenkins_slave_password == ""
+
+- name: verify jenkins master_url
+  uri:
+    url: "{{ master_url }}"
+    method: GET
+    status_code: 200,403
+
+- include: ulimit.yml
+- include: supervisord.yml
+
+- name: install systemd on old OS
+  become: true
+  apt:
+    name: "{{ item }}"
+    state: latest
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'
+  ignore_errors: true
+  with_items:
+  - unzip
+  - systemd
+
+- name: download java swarm sclient
+  get_url:
+    url: "https://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/{{ java_swarm_client }}/swarm-client-{{ java_swarm_client }}.jar"
+    dest: "/opt/swarm-client.jar"
+  register: java_swarm_client_get
+  until: "'OK' in java_swarm_client_get.msg or 'file already exists' in java_swarm_client_get.msg"
+  retries: 5
+  delay: 10
+  check_mode: no
+  tags:
+    - jenkins
+
+- name: ensure jenkins_slave log directory
+  become: true
+  file:
+    path: "{{ jenkins_slave_log_dir }}"
+    state: directory
+    owner: "{{ jenkins_user }}"
+    mode: 0755
+  tags:
+    - jenkins
+
+- name: setup start_slave scripts
+  become: true
+  template:
+    src: start_jenkins_slave.sh.j2
+    dest: "{{ customized_bin_dir }}/start_jenkins_slave.sh"
+    mode: 0755
+  notify: restart supervisord
+  tags:
+    - jenkins
+
+- name: setup jenkins_slave supervisord config
+  become: true
+  template:
+    src: jenkins_slave_supervisord.conf.j2
+    dest: "{{ supervisord_conf_dir }}/jenkins_slave.conf"
+  notify: restart supervisord
+  tags:
+    - jenkins
+
+- name: remove Jenkins Slave password file
+  become: true
+  file:
+    path: "/tmp/jenkins_slave_password"
+    state: absent
+  tags:
+    - jenkins

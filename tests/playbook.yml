@@ -1,0 +1,21 @@
+- hosts: ubuntu-1
+  become: true
+  vars:
+    is_vagrant: true
+    jenkins_plugins:
+      - maven-plugin
+      - javadoc
+      - junit
+      - mailer
+      - token-macro
+      - workflow-aggregator
+      - ldap
+      - blueocean
+      - swarm
+      - active-directory
+      - authentication-tokens
+      - ws-cleanup
+      - discard-old-build
+      - role-strategy
+  roles:
+    - ~/ebates/jenkins

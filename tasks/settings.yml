@@ -1,0 +1,150 @@
+---
+- name: create jenkins group
+  group:
+    name: "{{ jenkins_group }}"
+    state: present
+  ignore_errors: true
+  tags:
+    - jenkins
+
+# in case jenkins user is managed by AD
+- name: create jenkins user
+  user:
+    name: "{{ jenkins_user }}"
+    shell: /sbin/bash
+    home: "/home/{{ jenkins_user }}"
+    group: "{{ jenkins_group }}"
+    state: present
+  ignore_errors: true
+  tags:
+    - jenkins
+
+- name: install jenkins-job-builder
+  become: true
+  pip:
+    name: jenkins-job-builder
+    extra_args: --user
+
+- name: Modify variables in init file
+  lineinfile:
+    dest: "{{ jenkins_init_file }}"
+    insertafter: '^{{ item.option }}='
+    regexp: '^{{ item.option}}=\"\${{ item.option }} '
+    line: '{{ item.option }}="${{ item.option }} {{ item.value }}"'
+    state: present
+  with_items:
+      "{{ jenkins_init_changes }}"
+  notify:
+    - restart jenkins
+  tags:
+   - jenkins
+
+- name: Set the Jenkins home directory
+  lineinfile:
+    dest: "{{ jenkins_init_file }}"
+    regexp: '^JENKINS_HOME=.*'
+    line: 'JENKINS_HOME={{ jenkins_home }}'
+  notify:
+    - restart jenkins
+  tags:
+   - jenkins
+
+- name: Set HTTP port in Jenkins config.
+  lineinfile:
+    backrefs: yes
+    dest: "{{ jenkins_init_file }}"
+    regexp: '^{{ jenkins_http_port_param }}='
+    line: '{{ jenkins_http_port_param }}={{ jenkins_http_port }}'
+  notify:
+    - restart jenkins
+  tags:
+   - jenkins
+
+- name: Ensure jenkins_home {{ jenkins_home }} exists
+  file:
+    path: "{{ jenkins_home }}"
+    state: directory
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_group }}"
+    mode: u+rwx
+  tags:
+   - jenkins
+
+- name: Create custom init scripts directory.
+  file:
+    path: "{{ jenkins_home }}/init.groovy.d"
+    state: directory
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_group }}"
+    mode: 0775
+  tags:
+   - jenkins
+
+- name: Configuration useful groovy files
+  template:
+    src: "jenkins/useful_groovy_snippets.groovy.j2"
+    dest: "{{ jenkins_home }}/init.groovy.d/useful_groovy_snippets.groovy.j2"
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_group }}"
+    mode: 0755
+  tags:
+   - jenkins
+
+- name: Configure Jenkins location
+  template:
+    src: "jenkins/jenkins.model.JenkinsLocationConfiguration.xml.j2"
+    dest: "{{ jenkins_home }}/jenkins.model.JenkinsLocationConfiguration.xml"
+    mode: 0644
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_group }}"
+  notify:
+    - restart jenkins
+  tags:
+    - jenkins
+
+- name: Create intermediate dirs for custom files
+  file:
+    path: "{{ jenkins_home }}/{{ item | dirname }}"
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_group }}"
+    mode: 0755
+    state: directory
+  when: jenkins_include_custom_files
+  with_items: "{{ jenkins_custom_files }}"
+  tags:
+    - jenkins
+
+- name: Configure custom files
+  file:
+    src: "{{ jenkins_source_dir_configs }}/{{ item }}"
+    dest: "{{ jenkins_home }}/{{ item }}"
+    mode: 0644
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_group }}"
+  when: jenkins_include_custom_files
+  with_items: "{{ jenkins_custom_files }}"
+  tags:
+    - jenkins
+
+- name: secrets dir is up to date
+  copy:
+    src: "{{ jenkins_source_secrets }}"
+    dest: "{{ jenkins_home }}/secrets"
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_group }}"
+  when: jenkins_include_secrets
+  tags:
+    - jenkins
+
+- name: set permissions on secrets dir
+  file:
+    path: "{{ jenkins_home }}/secrets"
+    mode: 0700
+  when: jenkins_include_secrets
+  tags:
+    - jenkins
+
+- name: Trigger handlers immediately in case Jenkins was installed
+  meta: flush_handlers
+  tags:
+   - jenkins
