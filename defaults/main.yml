@@ -19,13 +19,13 @@ jenkins_domain: ""
 jenkins_hostname: "{% if is_vagrant %}localhost{% else %}{{ inventory_hostname }}.{{ jenkins_domain }}{% endif %}"
 jenkins_jar_location: /opt/jenkins-cli.jar
 jenkins_url_prefix: ""
-jenkins_url: "{% if jenkins_install_reverse_proxy %}http://{{ jenkins_hostname }}{% else %}http://{{ jenkins_hostname }}:{{ jenkins_http_port }}{% endif %}"
+jenkins_url: "{% if jenkins_install_reverse_proxy %}http://{{ jenkins_hostname }}{{ jenkins_url_prefix }}{% else %}http://{{ jenkins_hostname }}:{{ jenkins_http_port }}{{ jenkins_url_prefix }}{% endif %}"
 
 # If you need to override any java options then do that here.
 jenkins_java_options: "-Djenkins.install.runSetupWizard=false"
 
 # The admininstrator email address for the Jenkins server
-jenkins_admin: "admin@example.com"
+jenkins_admin_email: "admin@example.com"
 
 # The names of the jobs (jenkins_source_dir_jobs/job_name/)
 jenkins_jobs: []
