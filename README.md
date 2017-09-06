@@ -32,8 +32,21 @@ Requirements
 
 Role Variables
 --------------
+**Upgrade**
+- upgrade Jenkins Master by specifying `jenkins_version: 2.75`
+
+**Settings**
 
 - Jenkins http port: `jenkins_http_port`, by default is 8080
+- `jenkins_hostname` for example: jenkins.ebates.int
+- `jenkins_jar_location`: jenkins CLI file locations
+- `jenkins_url_prefix` = /jenkins, for example, jenkins.ebates.int:8080`/jenkins`/cli
+- `jenkins_java_options`: specify a list of JAVA_ARGS values
+- `jenkins_admin_email`: admin@example.com
+
+**Jobs**
+
+- `jenkins_jobs: []`: specify a list of job.xml under `files/jenkins-configs/jobs` folder. Jenkins will pick up and install the jobs accordingly.
 
 **Plugins**
 
@@ -60,9 +73,6 @@ vars:
   jenkins_custom_files:
     - org.jenkinsci.main.modules.sshd.SSHD.xml
 ```
-
-**Upgrade**
-- upgrade Jenkins Master by specifying `jenkins_version: 2.75`
 
 **Backup**
 
